@@ -62,6 +62,7 @@
     <img id="poubelleImage" src="b.png" alt="Poubelle">
 
     <script>
+        const socket = new WebSocket('wss://192.168.142.131:81/');
         const fs = require('fs');
 const https = require('https');
 const WebSocket = require('ws');
