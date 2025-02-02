@@ -62,37 +62,34 @@
     <img id="poubelleImage" src="b.png" alt="Poubelle">
 
     <script>
-        const socket = new WebSocket('ws://192.168.142.131:81/'); // IP de ton ESP8266
+        const fs = require('fs');
+const https = require('https');
+const WebSocket = require('ws');
 
-        socket.onopen = function() {
-            document.getElementById("status").innerText = "Connecté";
-            document.getElementById("status").classList.remove("loading");
-        };
+// Charger les certificats SSL
+const server = https.createServer({
+  cert: fs.readFileSync('/path/to/cert.pem'),
+  key: fs.readFileSync('/path/to/key.pem')
+});
 
-        socket.onmessage = function(event) {
-            try {
-                let data = JSON.parse(event.data);
-                let distance = parseInt(data.distance);
-                let imageElement = document.getElementById("poubelleImage");
+// Créer un serveur WebSocket sécurisé
+const wss = new WebSocket.Server({ server });
 
-                if (distance <= 10) {
-                    imageElement.src = "a.png"; // Poubelle pleine
-                } else {
-                    imageElement.src = "b.png"; // Poubelle vide
-                }
-            } catch (e) {
-                console.error("Erreur lors du traitement des données WebSocket", e);
-            }
-        };
+wss.on('connection', function connection(ws) {
+  console.log('Un client s\'est connecté');
 
-        socket.onerror = function(error) {
-            document.getElementById("status").innerText = "Erreur de connexion";
-            document.getElementById("status").classList.remove("loading");
-        };
+  ws.on('message', function incoming(message) {
+    console.log('Message reçu du client: %s', message);
+    ws.send('Données reçues');
+  });
 
-        socket.onclose = function() {
-            document.getElementById("status").innerText = "Connexion fermée";
-        };
+  ws.send('Bienvenue sur le serveur WebSocket sécurisé !');
+});
+
+server.listen(8080, () => {
+  console.log('Serveur WebSocket sécurisé en écoute sur wss://localhost:8080');
+});
+
     </script>
 </body>
 </html>
