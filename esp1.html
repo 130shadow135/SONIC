@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suivi de la Poubelle</title>
+    <style>
+        /* Styles généraux */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #0a192f; /* Bleu nuit */
+            color: #f8f9fa; /* Texte clair */
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        #status {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+
+        /* Style de l'image */
+        img {
+            width: 200px;
+            height: auto;
+            transition: transform 0.3s ease-in-out;
+            box-shadow: 0px 4px 10px rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+
+        img:hover {
+            transform: scale(1.05);
+        }
+
+        /* Effet de chargement */
+        .loading {
+            font-size: 1.2rem;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <h1>État de la Poubelle</h1>
+    <p id="status" class="loading">Connexion en cours...</p>
+    <img id="poubelleImage" src="b.png" alt="Poubelle">
+
+    <script>
+        const socket = new WebSocket('ws://192.168.142.131:81/'); // IP de ton ESP8266
+
+        socket.onopen = function() {
+            document.getElementById("status").innerText = "Connecté";
+            document.getElementById("status").classList.remove("loading");
+        };
+
+        socket.onmessage = function(event) {
+            try {
+                let data = JSON.parse(event.data);
+                let distance = parseInt(data.distance);
+                let imageElement = document.getElementById("poubelleImage");
+
+                if (distance <= 10) {
+                    imageElement.src = "a.png"; // Poubelle pleine
+                } else {
+                    imageElement.src = "b.png"; // Poubelle vide
+                }
+            } catch (e) {
+                console.error("Erreur lors du traitement des données WebSocket", e);
+            }
+        };
+
+        socket.onerror = function(error) {
+            document.getElementById("status").innerText = "Erreur de connexion";
+            document.getElementById("status").classList.remove("loading");
+        };
+
+        socket.onclose = function() {
+            document.getElementById("status").innerText = "Connexion fermée";
+        };
+    </script>
+</body>
+</html>
