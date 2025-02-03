@@ -5,11 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Suivi de la Poubelle</title>
     <style>
-        /* Styles généraux */
         body {
             font-family: 'Arial', sans-serif;
-            background-color: #0a192f; /* Bleu nuit */
-            color: #f8f9fa; /* Texte clair */
+            background-color: #0a192f;
+            color: #f8f9fa;
             text-align: center;
             margin: 0;
             padding: 0;
@@ -26,11 +25,17 @@
         }
 
         #status {
-            font-size: 1.2rem;
+            font-size: 1.5rem;
+            font-weight: bold;
             margin-bottom: 20px;
         }
 
-        /* Style de l'image */
+        #distance {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #17a2b8;
+        }
+
         img {
             width: 200px;
             height: auto;
@@ -43,7 +48,6 @@
             transform: scale(1.05);
         }
 
-        /* Effet de chargement */
         .loading {
             font-size: 1.2rem;
             animation: blink 1s infinite;
@@ -59,38 +63,56 @@
 <body>
     <h1>État de la Poubelle</h1>
     <p id="status" class="loading">Connexion en cours...</p>
-    <img id="poubelleImage" src="b.png" alt="Poubelle">
+    <p id="distance">Distance : -- cm</p>
+    <img id="poubelleImage" src="b.png" alt="Poubelle Vide">
 
     <script>
-        const socket = new WebSocket('wss://192.168.142.131:81/');
-        const fs = require('fs');
-const https = require('https');
-const WebSocket = require('ws');
+        const ESP_IP = "192.168.43.153"; // Remplace par l'adresse IP de ton ESP8266
+        let socket;
+        let retryInterval = 5000; // Temps avant reconnexion
 
-// Charger les certificats SSL
-const server = https.createServer({
-  cert: fs.readFileSync('/path/to/cert.pem'),
-  key: fs.readFileSync('/path/to/key.pem')
-});
+        function connectWebSocket() {
+            socket = new WebSocket(`ws://${ESP_IP}:81/`);
 
-// Créer un serveur WebSocket sécurisé
-const wss = new WebSocket.Server({ server });
+            socket.onopen = function() {
+                document.getElementById("status").innerText = "Connecté";
+                document.getElementById("status").classList.remove("loading");
+            };
 
-wss.on('connection', function connection(ws) {
-  console.log('Un client s\'est connecté');
+            socket.onmessage = function(event) {
+                try {
+                    let data = JSON.parse(event.data);
+                    let distance = parseInt(data.distance);
+                    let imageElement = document.getElementById("poubelleImage");
+                    let distanceText = document.getElementById("distance");
 
-  ws.on('message', function incoming(message) {
-    console.log('Message reçu du client: %s', message);
-    ws.send('Données reçues');
-  });
+                    console.log("Distance reçue :", distance);
+                    distanceText.innerText = `Distance : ${distance} cm`;
 
-  ws.send('Bienvenue sur le serveur WebSocket sécurisé !');
-});
+                    if (distance <= 15) {
+                        imageElement.src = "a.png"; // Image poubelle pleine
+                        document.getElementById("status").innerText = "Poubelle pleine";
+                    } else {
+                        imageElement.src = "b.png"; // Image poubelle vide
+                        document.getElementById("status").innerText = "Poubelle vide";
+                    }
+                } catch (e) {
+                    console.error("Erreur de parsing JSON", e);
+                }
+            };
 
-server.listen(8080, () => {
-  console.log('Serveur WebSocket sécurisé en écoute sur wss://localhost:8080');
-});
+            socket.onerror = function(error) {
+                document.getElementById("status").innerText = "Erreur de connexion";
+                document.getElementById("status").classList.add("loading");
+            };
 
+            socket.onclose = function() {
+                document.getElementById("status").innerText = "Connexion fermée, reconnexion...";
+                setTimeout(connectWebSocket, retryInterval);
+            };
+        }
+
+        connectWebSocket();
     </script>
 </body>
 </html>
